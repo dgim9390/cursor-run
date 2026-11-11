@@ -34,4 +34,7 @@ cat > "$app/Info.plist" <<'EOF'
 <key>LSUIElement</key><true/>
 </dict></plist>
 EOF
-codesign --force -s - "$bundle"
+# 개발자 인증서로 서명하면 다시 빌드해도 입력 모니터링 권한이 유지된다.
+# 인증서가 없으면 임시 서명(-)을 쓰고, 그때는 빌드할 때마다 권한을 다시 줘야 한다.
+identity=$(security find-identity -v -p codesigning | awk -F'"' '/Apple Development/ {print $2; exit}')
+codesign --force -s "${identity:--}" "$bundle"

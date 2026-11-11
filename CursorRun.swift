@@ -31,6 +31,15 @@ func achievement(_ meters: Double) -> (done: String, next: String) {
     return (done, next)
 }
 
+// 기록 메뉴에 보여줄 줄: 최근 날짜부터 30일치, "11월 10일  1.23km · 150타"
+func historyLines(_ history: [String: [String: Double]]) -> [String] {
+    history.sorted { $0.key > $1.key }.prefix(30).map {
+        let date = $0.key.split(separator: "-").dropFirst().compactMap { Int($0) }  // [월, 일]
+        let label = date.count == 2 ? "\(date[0])월 \(date[1])일" : $0.key
+        return "\(label)  \(format($0.value["m"] ?? 0)) · \(Int($0.value["keys"] ?? 0).formatted())타"
+    }
+}
+
 final class LoginToggle: NSObject {
     @objc func toggle(_ sender: NSMenuItem) {
         let service = SMAppService.mainApp
@@ -47,6 +56,10 @@ if CommandLine.arguments.contains("--test") {
     precondition(achievement(0) == ("🏆 아직 업적 없음", "다음: 100m 달리기까지 100.0m"))
     precondition(achievement(1300) == ("🏆 한강 횡단 완료", "다음: 한라산 등반까지 647.0m"))
     precondition(achievement(5e8).next == "모든 업적 달성!")
+    precondition(
+        historyLines(["2026-11-09": ["m": 1234, "keys": 150], "2026-11-10": ["m": 50, "keys": 0]])
+            == ["11월 10일  50.0m · 0타", "11월 9일  1.23km · 150타"])
+    precondition(historyLines(Dictionary(uniqueKeysWithValues: (100...140).map { ("2026-\($0)", [:]) })).count == 30)
     precondition(zip(milestones, milestones.dropFirst()).allSatisfy { $0.0 < $1.0 })  // 거리 오름차순
     precondition(format(0) == "0.0m")
     precondition(format(999.94) == "999.9m")
@@ -63,10 +76,12 @@ let metersPerPoint = widthMM > 0
     : 0.000264  // 물리 크기를 모르는 디스플레이는 96dpi로 가정
 
 let defaults = UserDefaults.standard
-var day = dayString()
-var today = defaults.string(forKey: "day") == day ? defaults.double(forKey: "today") : 0
+// 저장된 날짜가 오늘이 아니면 첫 refresh()가 그날 기록을 지난 기록으로 넘긴다
+var day = defaults.string(forKey: "day") ?? dayString()
+var today = defaults.double(forKey: "today")
+var history = defaults.dictionary(forKey: "history") as? [String: [String: Double]] ?? [:]
 var total = defaults.double(forKey: "total")
-var keysToday = defaults.string(forKey: "day") == day ? defaults.integer(forKey: "keysToday") : 0
+var keysToday = defaults.integer(forKey: "keysToday")
 var keysTotal = defaults.integer(forKey: "keysTotal")
 var last = NSEvent.mouseLocation
 // 시작 시점에 이미 달성한 업적은 알리지 않는다
@@ -173,6 +188,17 @@ let keysItem = NSMenuItem(
     action: keysAllowed ? nil : #selector(KeyPermission.openSettings), keyEquivalent: "")
 keysItem.target = keyPermission
 menu.addItem(keysItem)
+let historyItem = NSMenuItem(title: "📅 기록", action: nil, keyEquivalent: "")
+historyItem.submenu = NSMenu()
+menu.addItem(historyItem)
+func rebuildHistory() {
+    historyItem.submenu?.removeAllItems()
+    let lines = historyLines(history)
+    for line in lines.isEmpty ? ["아직 기록 없음"] : lines {
+        historyItem.submenu?.addItem(NSMenuItem(title: line, action: nil, keyEquivalent: ""))
+    }
+}
+rebuildHistory()
 menu.addItem(.separator())
 let doneItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
 let nextItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
@@ -199,7 +225,16 @@ NSEvent.addGlobalMonitorForEvents(
 
 func refresh() {
     let now = dayString()
-    if now != day { day = now; today = 0; keysToday = 0 }
+    if now != day {
+        if today > 0 || keysToday > 0 {  // 날이 바뀌면 지운 기록을 버리지 않고 날짜별로 남긴다
+            history[day] = ["m": today, "keys": Double(keysToday)]
+            defaults.set(history, forKey: "history")
+            rebuildHistory()
+        }
+        day = now
+        today = 0
+        keysToday = 0
+    }
     item.button?.title = "🖱 " + format(today) + (keysAllowed ? "  ⌨️ \(keysToday.formatted())" : "")
     if keysAllowed {
         keysItem.title = "⌨️ 타자: 오늘 \(keysToday.formatted())타 · 누적 \(keysTotal.formatted())타"
