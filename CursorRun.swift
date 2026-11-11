@@ -25,7 +25,7 @@ let milestones: [(Double, String)] = [
 ]
 
 func achievement(_ meters: Double) -> (done: String, next: String) {
-    let done = milestones.last { $0.0 <= meters }.map { "🏆 \($0.1) 완료" } ?? "🏆 아직 업적 없음"
+    let done = milestones.last { $0.0 <= meters }.map { "\($0.1) 완료" } ?? "아직 업적 없음"
     let next = milestones.first { $0.0 > meters }
         .map { "다음: \($0.1)까지 \(format($0.0 - meters))" } ?? "모든 업적 달성!"
     return (done, next)
@@ -53,8 +53,8 @@ final class LoginToggle: NSObject {
 }
 
 if CommandLine.arguments.contains("--test") {
-    precondition(achievement(0) == ("🏆 아직 업적 없음", "다음: 100m 달리기까지 100.0m"))
-    precondition(achievement(1300) == ("🏆 한강 횡단 완료", "다음: 한라산 등반까지 647.0m"))
+    precondition(achievement(0) == ("아직 업적 없음", "다음: 100m 달리기까지 100.0m"))
+    precondition(achievement(1300) == ("한강 횡단 완료", "다음: 한라산 등반까지 647.0m"))
     precondition(achievement(5e8).next == "모든 업적 달성!")
     precondition(
         historyLines(["2026-11-09": ["m": 1234, "keys": 150], "2026-11-10": ["m": 50, "keys": 0]])
@@ -102,7 +102,7 @@ notifications.delegate = notificationDelegate
 
 func notify(_ body: String) {
     let content = UNMutableNotificationContent()
-    content.title = "🏆 업적 달성"
+    content.title = "업적 달성"
     content.body = body
     content.sound = .default
     notifications.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)) {
@@ -184,11 +184,11 @@ if let keyTap {
     CFRunLoopAddSource(CFRunLoopGetMain(), CFMachPortCreateRunLoopSource(nil, keyTap, 0), .commonModes)
 }
 let keysItem = NSMenuItem(
-    title: "⌨️ 타자 수 켜기: 입력 모니터링 허용 후 앱 재시작…",
+    title: "타자 수 켜기: 입력 모니터링 허용 후 앱 재시작…",
     action: keysAllowed ? nil : #selector(KeyPermission.openSettings), keyEquivalent: "")
 keysItem.target = keyPermission
 menu.addItem(keysItem)
-let historyItem = NSMenuItem(title: "📅 기록", action: nil, keyEquivalent: "")
+let historyItem = NSMenuItem(title: "기록", action: nil, keyEquivalent: "")
 historyItem.submenu = NSMenu()
 menu.addItem(historyItem)
 func rebuildHistory() {
@@ -235,9 +235,9 @@ func refresh() {
         today = 0
         keysToday = 0
     }
-    item.button?.title = "🖱 " + format(today) + (keysAllowed ? "  ⌨️ \(keysToday.formatted())" : "")
+    item.button?.title = format(today) + (keysAllowed ? " · \(keysToday.formatted())타" : "")
     if keysAllowed {
-        keysItem.title = "⌨️ 타자: 오늘 \(keysToday.formatted())타 · 누적 \(keysTotal.formatted())타"
+        keysItem.title = "타자: 오늘 \(keysToday.formatted())타 · 누적 \(keysTotal.formatted())타"
     }
     todayItem.title = "오늘: " + format(today)
     totalItem.title = "누적: " + format(total)
