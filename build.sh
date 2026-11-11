@@ -18,7 +18,7 @@ for s in 16 32 128 256 512; do
 done
 iconutil -c icns "$set" -o "$app/Resources/AppIcon.icns"
 # 표시 이름만 커서런이고 번들 ID·실행 파일은 MouseOdometer 그대로다:
-# 바꾸면 저장된 기록(defaults 도메인)과 알림 권한이 초기화된다
+# 바꾸면 저장된 기록(defaults 도메인)과 입력 모니터링 권한이 초기화된다
 cat > "$app/Info.plist" <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
