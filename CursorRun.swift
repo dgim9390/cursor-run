@@ -66,6 +66,8 @@ let defaults = UserDefaults.standard
 var day = dayString()
 var today = defaults.string(forKey: "day") == day ? defaults.double(forKey: "today") : 0
 var total = defaults.double(forKey: "total")
+var keysToday = defaults.string(forKey: "day") == day ? defaults.integer(forKey: "keysToday") : 0
+var keysTotal = defaults.integer(forKey: "keysTotal")
 var last = NSEvent.mouseLocation
 // 시작 시점에 이미 달성한 업적은 알리지 않는다
 var achieved = milestones.filter { $0.0 <= total }.count
@@ -135,6 +137,42 @@ let totalItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
 let menu = NSMenu()
 menu.addItem(todayItem)
 menu.addItem(totalItem)
+
+// 타자 수: 어떤 키인지는 읽지 않고 눌린 횟수만 센다. 입력 모니터링 권한이 필요하고,
+// 권한을 준 뒤에는 앱을 다시 켜야 집계가 시작된다.
+final class KeyPermission: NSObject {
+    @objc func openSettings() {
+        NSWorkspace.shared.open(
+            URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")!)
+    }
+}
+let keyPermission = KeyPermission()
+let keysAllowed = CGPreflightListenEventAccess()
+if !keysAllowed { CGRequestListenEventAccess() }
+var keyTap: CFMachPort?
+keyTap = CGEvent.tapCreate(
+    tap: .cgSessionEventTap, place: .headInsertEventTap, options: .listenOnly,
+    eventsOfInterest: CGEventMask(1 << CGEventType.keyDown.rawValue),
+    callback: { _, type, event, _ in
+        if type == .keyDown {
+            // 키를 누르고 있을 때의 자동 반복은 타자로 치지 않는다
+            if event.getIntegerValueField(.keyboardEventAutorepeat) == 0 {
+                keysToday += 1
+                keysTotal += 1
+            }
+        } else if let keyTap {
+            CGEvent.tapEnable(tap: keyTap, enable: true)  // 시스템이 탭을 끈 경우(타임아웃 등) 다시 켠다
+        }
+        return Unmanaged.passUnretained(event)
+    }, userInfo: nil)
+if let keyTap {
+    CFRunLoopAddSource(CFRunLoopGetMain(), CFMachPortCreateRunLoopSource(nil, keyTap, 0), .commonModes)
+}
+let keysItem = NSMenuItem(
+    title: "⌨️ 타자 수 켜기: 입력 모니터링 허용 후 앱 재시작…",
+    action: keysAllowed ? nil : #selector(KeyPermission.openSettings), keyEquivalent: "")
+keysItem.target = keyPermission
+menu.addItem(keysItem)
 menu.addItem(.separator())
 let doneItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
 let nextItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
@@ -161,8 +199,11 @@ NSEvent.addGlobalMonitorForEvents(
 
 func refresh() {
     let now = dayString()
-    if now != day { day = now; today = 0 }
-    item.button?.title = "🖱 " + format(today)
+    if now != day { day = now; today = 0; keysToday = 0 }
+    item.button?.title = "🖱 " + format(today) + (keysAllowed ? "  ⌨️ \(keysToday.formatted())" : "")
+    if keysAllowed {
+        keysItem.title = "⌨️ 타자: 오늘 \(keysToday.formatted())타 · 누적 \(keysTotal.formatted())타"
+    }
     todayItem.title = "오늘: " + format(today)
     totalItem.title = "누적: " + format(total)
     (doneItem.title, nextItem.title) = achievement(total)
@@ -174,6 +215,8 @@ func refresh() {
     defaults.set(day, forKey: "day")
     defaults.set(today, forKey: "today")
     defaults.set(total, forKey: "total")
+    defaults.set(keysToday, forKey: "keysToday")
+    defaults.set(keysTotal, forKey: "keysTotal")
 }
 
 refresh()
