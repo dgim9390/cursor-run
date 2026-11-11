@@ -1,5 +1,6 @@
 import Cocoa
 import ServiceManagement
+import UserNotifications
 
 func format(_ meters: Double) -> String {
     meters < 1000 ? String(format: "%.1fm", meters) : String(format: "%.2fkm", meters / 1000)
@@ -9,6 +10,25 @@ func dayString() -> String {
     let f = DateFormatter()
     f.dateFormat = "yyyy-MM-dd"
     return f.string(from: Date())
+}
+
+// 누적 거리 기준, 거리는 대략적인 실제 값
+let milestones: [(Double, String)] = [
+    (100, "100m 달리기"), (400, "운동장 한 바퀴"), (828, "부르즈 할리파 등반"),
+    (1_200, "한강 횡단"), (1_947, "한라산 등반"), (2_744, "백두산 등반"),
+    (3_776, "후지산 등반"), (5_000, "5km 달리기"), (8_849, "에베레스트 등반"),
+    (10_000, "10km 달리기"), (10_935, "마리아나 해구 잠수"), (21_098, "하프 마라톤"),
+    (42_195, "마라톤"), (100_000, "우주 경계(고도 100km) 도달"), (140_000, "서울→대전"),
+    (325_000, "서울→부산"), (408_000, "국제우주정거장 고도 도달"), (1_160_000, "서울→도쿄"),
+    (4_500_000, "미국 횡단"), (11_000_000, "서울→뉴욕"), (21_196_000, "만리장성 종주"),
+    (40_075_000, "지구 한 바퀴"), (384_400_000, "달 도착"),
+]
+
+func achievement(_ meters: Double) -> (done: String, next: String) {
+    let done = milestones.last { $0.0 <= meters }.map { "🏆 \($0.1) 완료" } ?? "🏆 아직 업적 없음"
+    let next = milestones.first { $0.0 > meters }
+        .map { "다음: \($0.1)까지 \(format($0.0 - meters))" } ?? "모든 업적 달성!"
+    return (done, next)
 }
 
 // 기록 메뉴에 보여줄 줄: 최근 날짜부터 30일치, "11월 10일  1.23km · 150타"
@@ -33,10 +53,14 @@ final class LoginToggle: NSObject {
 }
 
 if CommandLine.arguments.contains("--test") {
+    precondition(achievement(0) == ("🏆 아직 업적 없음", "다음: 100m 달리기까지 100.0m"))
+    precondition(achievement(1300) == ("🏆 한강 횡단 완료", "다음: 한라산 등반까지 647.0m"))
+    precondition(achievement(5e8).next == "모든 업적 달성!")
     precondition(
         historyLines(["2026-11-09": ["m": 1234, "keys": 150], "2026-11-10": ["m": 50, "keys": 0]])
             == ["11월 10일  50.0m · 0타", "11월 9일  1.23km · 150타"])
     precondition(historyLines(Dictionary(uniqueKeysWithValues: (100...140).map { ("2026-\($0)", [:]) })).count == 30)
+    precondition(zip(milestones, milestones.dropFirst()).allSatisfy { $0.0 < $1.0 })  // 거리 오름차순
     precondition(format(0) == "0.0m")
     precondition(format(999.94) == "999.9m")
     precondition(format(1234) == "1.23km")
@@ -60,6 +84,64 @@ var total = defaults.double(forKey: "total")
 var keysToday = defaults.integer(forKey: "keysToday")
 var keysTotal = defaults.integer(forKey: "keysTotal")
 var last = NSEvent.mouseLocation
+// 시작 시점에 이미 달성한 업적은 알리지 않는다
+var achieved = milestones.filter { $0.0 <= total }.count
+let notifications = UNUserNotificationCenter.current()
+
+// 앱이 활성 상태일 때는 macOS가 배너를 숨기므로, 항상 보이도록 명시한다
+final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter, willPresent notification: UNNotification,
+        withCompletionHandler done: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        done([.banner, .list, .sound])
+    }
+}
+let notificationDelegate = NotificationDelegate()
+notifications.delegate = notificationDelegate
+
+func notify(_ body: String) {
+    let content = UNMutableNotificationContent()
+    content.title = "🏆 업적 달성"
+    content.body = body
+    content.sound = .default
+    notifications.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)) {
+        if let error = $0 { NSLog("알림 전송 실패: \(error)") }
+    }
+}
+if CommandLine.arguments.contains("--test-notification") { notify("알림 테스트입니다") }
+// 시스템 허용 알림은 오른쪽 위에 작게 떠서 놓치기 쉬워, 먼저 화면 가운데 창으로 묻는다.
+// macOS가 최종 허용은 자체 UI에서만 받으므로 그 단계는 없앨 수 없다.
+notifications.getNotificationSettings { settings in
+    let status = settings.authorizationStatus
+    NSLog("알림 권한 상태: \(status.rawValue), 배너: \(settings.alertSetting.rawValue)")
+    // --ask-notifications: 이미 허용/거절한 뒤에도 창을 다시 띄운다
+    let forced = CommandLine.arguments.contains("--ask-notifications")
+    // 권한은 있어도 알림 스타일이 '없음'이면 배너 없이 알림 센터에만 쌓이므로 그때도 묻는다
+    let visible = status == .authorized && settings.alertSetting == .enabled
+    guard forced || (!visible && !defaults.bool(forKey: "skipNotificationPrompt")) else { return }
+    DispatchQueue.main.async {
+        let alert = NSAlert()
+        alert.messageText = "업적 달성 알림을 켤까요?"
+        alert.informativeText = status == .notDetermined
+            ? "허용을 누르면 화면 오른쪽 위에 macOS 확인 알림이 뜹니다. 거기서 '허용'을 한 번 더 눌러주세요."
+            : "허용을 누르면 시스템 설정의 커서런 알림 화면이 열립니다. '알림 허용'을 켜고 알림 스타일을 '배너'로 바꿔주세요."
+        alert.addButton(withTitle: "허용")
+        alert.addButton(withTitle: "안 함")
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn {
+            if status == .notDetermined {
+                notifications.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+            } else {
+                NSWorkspace.shared.open(
+                    URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=MouseOdometer")!)
+            }
+        } else if !forced {
+            defaults.set(true, forKey: "skipNotificationPrompt")
+        }
+    }
+}
+
 let app = NSApplication.shared
 app.setActivationPolicy(.accessory)
 
@@ -118,6 +200,11 @@ func rebuildHistory() {
 }
 rebuildHistory()
 menu.addItem(.separator())
+let doneItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+let nextItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+menu.addItem(doneItem)
+menu.addItem(nextItem)
+menu.addItem(.separator())
 let loginToggle = LoginToggle()
 let loginItem = NSMenuItem(title: "로그인 시 실행", action: #selector(LoginToggle.toggle(_:)), keyEquivalent: "")
 loginItem.target = loginToggle
@@ -154,6 +241,12 @@ func refresh() {
     }
     todayItem.title = "오늘: " + format(today)
     totalItem.title = "누적: " + format(total)
+    (doneItem.title, nextItem.title) = achievement(total)
+    let count = milestones.filter { $0.0 <= total }.count
+    if count > achieved {
+        notify("마우스로 \(milestones[count - 1].1) 완료! (누적 \(format(total)))")
+    }
+    achieved = count
     defaults.set(day, forKey: "day")
     defaults.set(today, forKey: "today")
     defaults.set(total, forKey: "total")
