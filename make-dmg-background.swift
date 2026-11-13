@@ -12,13 +12,10 @@ let scale = NSAffineTransform()
 scale.scale(by: 2)
 scale.concat()
 
-// 배경에 그림을 쓰면 Finder는 아이콘 이름을 화면 모드와 상관없이 검정으로 그리고, 색을 바꿀 설정이 없다.
-// 그래서 흰 이름표를 Finder 이름표 바로 아래에 직접 그린다. 배경은 Finder 다크 모드 창과 같은 짙은 회색.
-NSColor(white: 0.12, alpha: 1).setFill()
+// 밝은 배경: 배경 그림이 있으면 Finder는 아이콘 이름을 화면 모드와 상관없이 검정으로 그리므로, 그게 잘 읽히는 색
+NSColor(white: 0.95, alpha: 1).setFill()
 NSRect(x: 0, y: 0, width: width, height: height).fill()
-// 아이콘 뒤의 순수한 검정 패널: Finder의 검은 이름표가 이 위에 그려져 보이지 않게 된다
-NSColor.black.setFill()
-NSBezierPath(roundedRect: NSRect(x: 30, y: height - 206, width: 500, height: 178), xRadius: 18, yRadius: 18).fill()
+let ink = NSColor(white: 0.12, alpha: 1)
 
 func text(_ string: String, size: Double, weight: NSFont.Weight, top: Double, alpha: Double = 1) {
     let style = NSMutableParagraphStyle()
@@ -27,32 +24,21 @@ func text(_ string: String, size: Double, weight: NSFont.Weight, top: Double, al
         in: NSRect(x: 40, y: 0, width: width - 80, height: height - top),
         withAttributes: [
             .font: NSFont.systemFont(ofSize: size, weight: weight),
-            .foregroundColor: NSColor.white.withAlphaComponent(alpha),
+            .foregroundColor: ink.withAlphaComponent(alpha),
             .paragraphStyle: style,
         ])
 }
 
 // 두 아이콘(가운데 y=105) 사이의 화살표
-let arrow = NSMutableParagraphStyle()
-arrow.alignment = .center
+let center = NSMutableParagraphStyle()
+center.alignment = .center
 NSString(string: "→").draw(
     in: NSRect(x: 0, y: height - 105 - 30, width: width, height: 60),
     withAttributes: [
         .font: NSFont.systemFont(ofSize: 44, weight: .light),
-        .foregroundColor: NSColor.white.withAlphaComponent(0.85),
-        .paragraphStyle: arrow,
+        .foregroundColor: ink.withAlphaComponent(0.6),
+        .paragraphStyle: center,
     ])
-
-// 흰 이름표: make-dmg.sh의 아이콘 x 위치와 같아야 한다. Finder의 (안 보이는) 이름표 바로 아래에 둔다
-for (name, centerX) in [("커서런", 150.0), ("Applications", 410.0)] {
-    NSString(string: name).draw(
-        in: NSRect(x: centerX - 80, y: height - 178 - 18, width: 160, height: 18),
-        withAttributes: [
-            .font: NSFont.systemFont(ofSize: 13),
-            .foregroundColor: NSColor.white,
-            .paragraphStyle: arrow,  // 가운데 정렬
-        ])
-}
 
 text("설치 방법", size: 15, weight: .bold, top: 215)
 text(
@@ -62,6 +48,7 @@ text(
         시스템 설정 → 개인정보 보호 및 보안 → "그래도 열기"를 누릅니다.
     3. 타자 수를 세려면 같은 화면의 "입력 모니터링"에서 커서런을 켜고
         앱을 다시 실행합니다.
-    """, size: 12.5, weight: .regular, top: 243, alpha: 0.95)
+    """, size: 12.5, weight: .regular, top: 243, alpha: 0.85)
+
 try! rep.representation(using: .png, properties: [:])!
     .write(to: URL(fileURLWithPath: CommandLine.arguments[1]))
