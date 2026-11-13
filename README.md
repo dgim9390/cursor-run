@@ -33,13 +33,6 @@ cp -R 커서런.app ~/Applications/
 open ~/Applications/커서런.app
 ```
 
-## 실행 옵션
-
-```sh
-open ~/Applications/커서런.app --args --test-notification   # 테스트 알림 보내기
-open ~/Applications/커서런.app --args --ask-notifications   # 알림 허용 창 다시 띄우기
-```
-
 ## 파일
 
 - `CursorRun.swift` — 앱 전체 (업적 목록은 `milestones`)
