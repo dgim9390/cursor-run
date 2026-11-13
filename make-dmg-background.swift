@@ -14,9 +14,11 @@ scale.concat()
 
 // 배경에 그림을 쓰면 Finder는 아이콘 이름을 화면 모드와 상관없이 검정으로 그리고, 색을 바꿀 설정이 없다.
 // 그래서 흰 이름표를 Finder 이름표 바로 아래에 직접 그린다. 배경은 Finder 다크 모드 창과 같은 짙은 회색.
-// shortcut: Finder의 검은 이름표가 흐릿하게 겹쳐 보인다, 완전히 숨기려면 배경을 순수한 검정(NSColor.black)으로
 NSColor(white: 0.12, alpha: 1).setFill()
 NSRect(x: 0, y: 0, width: width, height: height).fill()
+// 아이콘 뒤의 순수한 검정 패널: Finder의 검은 이름표가 이 위에 그려져 보이지 않게 된다
+NSColor.black.setFill()
+NSBezierPath(roundedRect: NSRect(x: 30, y: height - 206, width: 500, height: 178), xRadius: 18, yRadius: 18).fill()
 
 func text(_ string: String, size: Double, weight: NSFont.Weight, top: Double, alpha: Double = 1) {
     let style = NSMutableParagraphStyle()
