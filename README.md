@@ -39,5 +39,6 @@ open ~/Applications/커서런.app
 - `CursorRun.swift` — 앱 전체 (업적 목록은 `milestones`)
 - `make-icon.swift` — 아이콘 그리기
 - `build.sh` — 앱 번들 만들기
+- `make-dmg.sh`, `make-dmg-background.swift` — 설치 안내가 들어간 배포용 DMG 만들기
 
 번들 ID와 실행 파일 이름은 `MouseOdometer`다. 바꾸면 저장된 기록과 알림 권한이 초기화된다.
