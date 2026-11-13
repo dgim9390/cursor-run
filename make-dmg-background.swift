@@ -12,9 +12,9 @@ let scale = NSAffineTransform()
 scale.scale(by: 2)
 scale.concat()
 
-// 진한 회색 배경. 아이콘 이름의 글자색은 Finder가 정하며 지정할 수 없다(다크 모드에서는 흰색).
-// shortcut: 라이트 모드에서 이름이 검정으로 그려지면 흐리게 보인다, 문제가 되면 배경을 더 밝게
-NSColor(white: 0.25, alpha: 1).setFill()
+// Finder 다크 모드 창과 같은 검은 배경.
+// shortcut: 라이트 모드에서는 Finder가 아이콘 이름을 검정으로 그려 안 보인다, 문제가 되면 배경을 중간 밝기로
+NSColor(white: 0.12, alpha: 1).setFill()
 NSRect(x: 0, y: 0, width: width, height: height).fill()
 
 func text(_ string: String, size: Double, weight: NSFont.Weight, top: Double, alpha: Double = 1) {
