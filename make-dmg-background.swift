@@ -1,8 +1,8 @@
 // DMG 창 배경(설치 안내 포함)을 2배 해상도 PNG로 그린다. 사용: swift make-dmg-background.swift 출력.png
-// 좌표는 make-dmg.sh의 창 크기(560x400)와 아이콘 위치에 맞춰져 있다.
+// 좌표는 make-dmg.sh의 창 크기(560x360)와 아이콘 위치에 맞춰져 있다.
 import Cocoa
 
-let width = 560.0, height = 400.0
+let width = 560.0, height = 360.0
 let rep = NSBitmapImageRep(
     bitmapDataPlanes: nil, pixelsWide: Int(width * 2), pixelsHigh: Int(height * 2), bitsPerSample: 8,
     samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
@@ -12,11 +12,10 @@ let scale = NSAffineTransform()
 scale.scale(by: 2)
 scale.concat()
 
-// 아이콘 이름표가 라이트 모드(검정)와 다크 모드(흰색) 모두에서 읽히는 중간 밝기의 파랑
-NSGradient(
-    starting: NSColor(red: 0.42, green: 0.60, blue: 1.0, alpha: 1),
-    ending: NSColor(red: 0.20, green: 0.27, blue: 0.66, alpha: 1))!
-    .draw(in: NSRect(x: 0, y: 0, width: width, height: height), angle: -90)
+// Finder 다크 모드 창과 같은 검은 배경.
+// shortcut: 라이트 모드에서는 Finder가 아이콘 이름을 검정으로 그려 안 보인다, 문제가 되면 배경을 중간 밝기로
+NSColor(white: 0.12, alpha: 1).setFill()
+NSRect(x: 0, y: 0, width: width, height: height).fill()
 
 func text(_ string: String, size: Double, weight: NSFont.Weight, top: Double, alpha: Double = 1) {
     let style = NSMutableParagraphStyle()
@@ -50,7 +49,5 @@ text(
     3. 타자 수를 세려면 같은 화면의 "입력 모니터링"에서 커서런을 켜고
         앱을 다시 실행합니다.
     """, size: 12.5, weight: .regular, top: 243, alpha: 0.95)
-text("타자 수는 눌린 횟수만 세며, 기록은 이 맥에만 저장됩니다.", size: 11, weight: .regular, top: 362, alpha: 0.7)
-
 try! rep.representation(using: .png, properties: [:])!
     .write(to: URL(fileURLWithPath: CommandLine.arguments[1]))

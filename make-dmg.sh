@@ -14,7 +14,7 @@ ln -s /Applications "$stage/Applications"
 
 # 배경: 1배·2배 해상도를 한 TIFF에 묶어 레티나에서도 선명하게
 swift make-dmg-background.swift "$work/bg@2x.png"
-sips -z 400 560 "$work/bg@2x.png" --out "$work/bg.png" >/dev/null
+sips -z 360 560 "$work/bg@2x.png" --out "$work/bg.png" >/dev/null
 tiffutil -cathidpicheck "$work/bg.png" "$work/bg@2x.png" -out "$stage/.background/background.tiff" 2>/dev/null
 
 # 쓰기 가능한 이미지로 만들어 창 모양을 저장한 뒤 압축본으로 바꾼다
@@ -29,8 +29,8 @@ on run argv
             set current view of container window to icon view
             set toolbar visible of container window to false
             set statusbar visible of container window to false
-            -- 내용 영역 560x400 + 제목 막대 28
-            set bounds of container window to {200, 120, 760, 548}
+            -- 내용 영역 560x360 + 제목 막대 28
+            set bounds of container window to {200, 120, 760, 508}
             set opts to icon view options of container window
             set arrangement of opts to not arranged
             set icon size of opts to 96
