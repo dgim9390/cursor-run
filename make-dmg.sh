@@ -34,10 +34,10 @@ on run argv
             set opts to icon view options of container window
             set arrangement of opts to not arranged
             set icon size of opts to 96
-            set text size of opts to 13
+            set text size of opts to 10
             set background picture of opts to file ".background:background.tiff"
-            set position of item "커서런.app" of container window to {150, 115}
-            set position of item "Applications" of container window to {410, 115}
+            set position of item "커서런.app" of container window to {150, 105}
+            set position of item "Applications" of container window to {410, 105}
             close
             open
             update without registering applications

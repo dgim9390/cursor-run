@@ -12,9 +12,9 @@ let scale = NSAffineTransform()
 scale.scale(by: 2)
 scale.concat()
 
-// Finder 다크 모드 창과 같은 검은 배경.
-// shortcut: 라이트 모드에서는 Finder가 아이콘 이름을 검정으로 그려 안 보인다, 문제가 되면 배경을 중간 밝기로
-NSColor(white: 0.12, alpha: 1).setFill()
+// 배경에 그림을 쓰면 Finder는 아이콘 이름을 화면 모드와 상관없이 검정으로 그리고, 색을 바꿀 설정이 없다.
+// 그래서 배경을 완전한 검정으로 해 Finder의 이름표를 안 보이게 하고, 흰 이름표를 바로 아래에 직접 그린다.
+NSColor.black.setFill()
 NSRect(x: 0, y: 0, width: width, height: height).fill()
 
 func text(_ string: String, size: Double, weight: NSFont.Weight, top: Double, alpha: Double = 1) {
@@ -29,16 +29,27 @@ func text(_ string: String, size: Double, weight: NSFont.Weight, top: Double, al
         ])
 }
 
-// 두 아이콘(가운데 y=115) 사이의 화살표
+// 두 아이콘(가운데 y=105) 사이의 화살표
 let arrow = NSMutableParagraphStyle()
 arrow.alignment = .center
 NSString(string: "→").draw(
-    in: NSRect(x: 0, y: height - 115 - 30, width: width, height: 60),
+    in: NSRect(x: 0, y: height - 105 - 30, width: width, height: 60),
     withAttributes: [
         .font: NSFont.systemFont(ofSize: 44, weight: .light),
         .foregroundColor: NSColor.white.withAlphaComponent(0.85),
         .paragraphStyle: arrow,
     ])
+
+// 흰 이름표: make-dmg.sh의 아이콘 x 위치와 같아야 한다. Finder의 (안 보이는) 이름표 바로 아래에 둔다
+for (name, centerX) in [("커서런", 150.0), ("Applications", 410.0)] {
+    NSString(string: name).draw(
+        in: NSRect(x: centerX - 80, y: height - 178 - 18, width: 160, height: 18),
+        withAttributes: [
+            .font: NSFont.systemFont(ofSize: 13),
+            .foregroundColor: NSColor.white,
+            .paragraphStyle: arrow,  // 가운데 정렬
+        ])
+}
 
 text("설치 방법", size: 15, weight: .bold, top: 215)
 text(
