@@ -204,6 +204,21 @@ let doneItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
 let nextItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
 menu.addItem(doneItem)
 menu.addItem(nextItem)
+// 업적 전체 목록: 달성한 것에 체크 표시
+let achievementsItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+achievementsItem.submenu = NSMenu()
+for (meters, name) in milestones {
+    achievementsItem.submenu?.addItem(
+        NSMenuItem(title: "\(name)  \(format(meters))", action: nil, keyEquivalent: ""))
+}
+menu.addItem(achievementsItem)
+func markAchievements(_ count: Int) {
+    achievementsItem.title = "업적 전체 (\(count)/\(milestones.count))"
+    for (i, item) in (achievementsItem.submenu?.items ?? []).enumerated() {
+        item.state = i < count ? .on : .off
+    }
+}
+markAchievements(achieved)
 menu.addItem(.separator())
 let loginToggle = LoginToggle()
 let loginItem = NSMenuItem(title: "로그인 시 실행", action: #selector(LoginToggle.toggle(_:)), keyEquivalent: "")
@@ -246,6 +261,7 @@ func refresh() {
     if count > achieved {
         notify("마우스로 \(milestones[count - 1].1) 완료! (누적 \(format(total)))")
     }
+    if count != achieved { markAchievements(count) }
     achieved = count
     defaults.set(day, forKey: "day")
     defaults.set(today, forKey: "today")
